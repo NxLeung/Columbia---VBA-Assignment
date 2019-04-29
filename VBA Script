@@ -1,0 +1,137 @@
+Sub stock()
+    Dim column As Integer
+    Dim lastrow As Double
+    Dim volume As Double
+    Dim summaryrow As Integer
+    Dim sameticker As Boolean
+    Dim mindate As Long
+    Dim minval As Double
+    Dim maxdate As Long
+    Dim maxval As Double
+    Dim nextdate As Long
+    Dim annualdelta As Double
+    Dim annualchange As Double
+    Dim increaseticker As String
+    Dim increasechange As Double
+    Dim decreaseticker As String
+    Dim decreasechange As Double
+    Dim greatestvolume As Double
+    Dim ws As Worksheet
+    Dim starting_ws As Worksheet
+    Set starting_ws = ActiveSheet
+    
+For Each ws In ThisWorkbook.Worksheets
+ws.Activate
+
+    ' Formats, titles and sorting data
+    Range("A:G").Sort Key1:=Range("a1"), Header:=xlYes
+    
+    Range("P2:P3").NumberFormat = "0.00%"
+    Range("K:K").NumberFormat = "0.00%"
+    Range("I1").Value = "Ticker"
+    Range("J1").Value = "Yearly Change"
+    Range("K1").Value = "% Change"
+    Range("L1").Value = "Total Stock Volume"
+    Range("O1").Value = "Ticker"
+    Range("P1").Value = "Value"
+    Range("N2").Value = "Greatest % Increase"
+    Range("N3").Value = "Greatest % Decrease"
+    Range("N4").Value = "Greatest Total Volume"
+
+    ' Initial variable value declarations
+    column = 1
+    lastrow = Cells(Rows.Count, 1).End(xlUp).Row
+    summaryrow = 2
+    mindate = Cells(2, column + 1).Value
+    minval = Cells(2, column + 2).Value
+    maxdate = Cells(2, column + 1).Value
+    maxval = Cells(2, column + 5).Value
+    increaseticker = Cells(2, column).Value
+    increasechange = 0
+    decreaseticker = Cells(2, column).Value
+    decreasechange = 0
+
+    
+    'Iterate and evaluate each row - excluding headers
+    
+    For i = 2 To lastrow
+    volume = volume + Cells(i, "G").Value
+    nextdate = Cells(i + 1, 2).Value
+    
+    ' Setting boolean variable to act as trigger to summarize and evaluate all data related to a stock ticker within consecutive data set NOTE: Order must be consecutive otherwise code will recognize ticker as a different stock
+    If Cells(i, column).Value = Cells(i + 1, column).Value Then
+        sameticker = True
+        Else: sameticker = False
+    End If
+    
+    ' Running totals for Open and Closing prices for the year
+        If (mindate > nextdate And sameticker) Then
+            mindate = nextdate
+            minval = Cells(i + 1, column + 2).Value
+        End If
+        
+        If (maxdate < nextdate And sameticker) Then
+            maxdate = nextdate
+            maxval = Cells(i + 1, column + 5).Value
+        End If
+        
+    ' Display all report metrics when new ticker shows up as we iterate through data
+        If Not sameticker Then
+            Cells(summaryrow, "I").Value = Cells(i, column).Value
+            Cells(summaryrow, "L").Value = volume
+            annualdelta = maxval - minval
+            
+            ' Check for zero values
+            If minval <> 0 Then
+                annualchange = (maxval / minval) - 1
+            Else: annualchange = 0
+            End If
+            
+            Cells(summaryrow, "J").Value = annualdelta
+                
+                'adding conditional formatting using if statement to evaluate the annual delta / yearly change
+                If annualdelta > 0 Then
+                    Cells(summaryrow, "J").Interior.Color = vbGreen
+                ElseIf annualdelta < 0 Then
+                    Cells(summaryrow, "J").Interior.Color = vbRed
+                End If
+            Cells(summaryrow, "K").Value = annualchange
+            summaryrow = summaryrow + 1
+
+    ' Running totals for greatest increase, decrease and total volume
+            If annualchange > increasechange Then
+                increasechange = annualchange
+                increaseticker = Cells(i, column).Value
+            End If
+
+            If annualchange < decreasechange Then
+                decreasechange = annualchange
+                decreaseticker = Cells(i, column).Value
+            End If
+
+            If volume > greatestvolume Then
+                greatestvolume = volume
+                volumeticker = Cells(i, column).Value
+            End If
+
+            volume = 0
+            mindate = Cells(i + 1, column + 1).Value
+            minval = Cells(i + 1, column + 2).Value
+            maxdate = Cells(i + 1, column + 1).Value
+            maxval = Cells(i + 1, column + 5).Value
+        End If
+    Next i
+
+    ' Print running totals
+    Range("O2").Value = increaseticker
+    Range("P2").Value = increasechange
+    Range("O3").Value = decreaseticker
+    Range("P3").Value = decreasechange
+    Range("O4").Value = volumeticker
+    Range("P4").Value = greatestvolume
+    ws.Cells.EntireColumn.AutoFit
+Next
+
+starting_ws.Activate
+
+End Sub
